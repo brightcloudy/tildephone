@@ -23,14 +23,14 @@ def basic_twiml():
         resp.pause(length=2)
         resp.say('Welcome to the tilde town message board.', voice='man')
     cur = conn.cursor()
-    cur.execute('SELECT userid FROM numbers WHERE number=?', request.values.get('From')[2:])
+    cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
     user_from_number = cur.fetchone()
     if user_from_number == None:
         resp.say('You are currently a guest user.', voice='man')
     else:
         cur.execute('UPDATE users SET lastseen=? WHERE userid=?', (int((datetime.utcnow()-datetime(1970,1,1)).total_seconds()), user_from_number))
         conn.commit()
-        cur.execute('SELECT name_recording FROM users WHERE userid=?', user_from_number)
+        cur.execute('SELECT name_recording FROM users WHERE userid=?', (user_from_number,))
         resp.say('Welcome back, user', voice='man')
         resp.play(site_url + 'static/' + cur.fetchone()[0])
     resp.pause(length=1)
@@ -62,7 +62,7 @@ def guest_prompt():
 def user_menu():
     resp = twiml.Response()
     digit = request.values.get('Digits')
-    cur.execute('SELECT userid FROM numbers WHERE number=?', request.values.get('From')[2:])
+    cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
     user_from_number = cur.fetchone()
     resp.say('Placeholder prompt.')
     resp.redirect('/prompt-user.xml')
@@ -121,7 +121,7 @@ def name_recorded():
         cur = conn.cursor()
         cur.execute('INSERT INTO users (name_recording, permissions, lastseen) VALUES (?, 0, ?)', (request.values.get('RecordingUrl').split('/')[-1], int((datetime.utcnow()-datetime(1970,1,1)).total_seconds())))
         conn.commit()
-        cur.execute('SELECT userid FROM users WHERE name_recording=?', request.values.get('RecordingUrl').split('/')[-1])
+        cur.execute('SELECT userid FROM users WHERE name_recording=?', (request.values.get('RecordingUrl').split('/')[-1],))
         newid = cur.fetchone()[0]
         cur.execute('INSERT INTO numbers (userid, number) VALUES (?, ?)', (newid, request.values.get('From')[2:]))
         conn.commit()
