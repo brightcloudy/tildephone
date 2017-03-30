@@ -106,7 +106,7 @@ def create_user():
 @app.route('/record-name-callback.xml', methods=['GET', 'POST'])
 def name_callback():
     resp = twiml.Response()
-    urlretrieve(request.values.get('RecordingUrl'), 'static/' + request.values.get('RecordingUrl').split('/')[-1])
+    urlretrieve(request.values.get('RecordingUrl'), 'static/' + request.values.get('RecordingUrl').split('/')[-1] + '.wav')
     return Response(response=str(resp), status=200, mimetype='text/xml')
 
 @app.route('/record-name.xml', methods=['GET', 'POST'])
@@ -114,15 +114,15 @@ def name_recorded():
     resp = twiml.Response()
     digits = request.values.get('Digits')
     if digits == None or digits == '*':
-        call_dict.update({request.values.get('CallSid'): request.values.get('RecordingUrl').split('/')[-1]})
+        call_dict.update({request.values.get('CallSid'): request.values.get('RecordingUrl').split('/')[-1] + '.wav'})
         resp.say('Here\'s what I heard.', voice='man')
         resp.play(request.values.get('RecordingUrl'))
         with resp.gather(numDigits=1) as gather:
             resp.say('If you want to keep that recording, do nothing. If you want to change it, press any key.', voice='man')
         cur = conn.cursor()
-        cur.execute('INSERT INTO users (name_recording, permissions, lastseen) VALUES (?, 0, ?)', (request.values.get('RecordingUrl').split('/')[-1], int((datetime.utcnow()-datetime(1970,1,1)).total_seconds())))
+        cur.execute('INSERT INTO users (name_recording, permissions, lastseen) VALUES (?, 0, ?)', (request.values.get('RecordingUrl').split('/')[-1] + '.wav', int((datetime.utcnow()-datetime(1970,1,1)).total_seconds())))
         conn.commit()
-        cur.execute('SELECT userid FROM users WHERE name_recording=?', (request.values.get('RecordingUrl').split('/')[-1],))
+        cur.execute('SELECT userid FROM users WHERE name_recording=?', (request.values.get('RecordingUrl').split('/')[-1] + '.wav',))
         newid = cur.fetchone()[0]
         cur.execute('INSERT INTO numbers (userid, number) VALUES (?, ?)', (newid, request.values.get('From')[2:]))
         conn.commit()
