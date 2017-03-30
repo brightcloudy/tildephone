@@ -111,7 +111,7 @@ def name_callback():
 def name_recorded():
     resp = twiml.Response()
     digits = request.values.get('Digits')
-    if digits == None:
+    if digits == None or digits == '*':
         resp.say('Here\'s what I heard.', voice='man')
         resp.pause(length=1)
         resp.play(request.values.get('RecordingUrl'))
