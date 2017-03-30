@@ -26,10 +26,11 @@ def basic_twiml():
         resp.say('Welcome to the tilde town message board.', voice='man')
     cur = conn.cursor()
     cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
-    user_from_number = cur.fetchone()[0]
+    user_from_number = cur.fetchone()
     if user_from_number == None:
         resp.say('You are currently a guest user.', voice='man')
     else:
+        user_from_number = user_from_number[0]
         cur.execute('UPDATE users SET lastseen=? WHERE userid=?', (int((datetime.utcnow()-datetime(1970,1,1)).total_seconds()), user_from_number))
         conn.commit()
         cur.execute('SELECT name_recording FROM users WHERE userid=?', (user_from_number,))
