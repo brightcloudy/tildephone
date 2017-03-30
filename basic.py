@@ -70,7 +70,7 @@ def user_menu():
     cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
     user_from_number = cur.fetchone()[0]
     if digit == '1':
-        cur.execute('SELECT userid, message_recording, created_datetime FROM messages LIMIT 10 ORDER BY created_datetime DESC')
+        cur.execute('SELECT userid, message_recording, created_datetime FROM messages ORDER BY created_datetime DESC')
         lastmessage = cur.fetchone()
         if lastmessage == None:
             resp.say('There are no messages in the system!', voice='man')
