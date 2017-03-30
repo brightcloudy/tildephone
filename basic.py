@@ -2,6 +2,7 @@ from flask import Flask, request, Response
 from datetime import datetime
 from twilio import twiml
 from urllib import urlretrieve
+import random
 import os
 import sqlite3
 app = Flask(__name__, static_url_path='/static')
@@ -140,6 +141,7 @@ def name_recorded():
         resp.play(request.values.get('RecordingUrl') + '.wav')
         with resp.gather(numDigits=1, timeout=10) as gather:
             resp.say('If you want to keep that recording, do nothing. If you want to change it, press any key.', voice='man')
+            resp.pause(length=5)
         cur = conn.cursor()
         cur.execute('INSERT INTO users (name_recording, permissions, lastseen) VALUES (?, 0, ?)', (request.values.get('RecordingUrl').split('/')[-1] + '.wav', int((datetime.utcnow()-datetime(1970,1,1)).total_seconds())))
         conn.commit()
