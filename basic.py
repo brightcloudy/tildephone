@@ -24,11 +24,11 @@ def basic_twiml():
         return Response(response=str(resp), status=200, mimetype='text/xml')
     if request.values.get('CallStatus') == 'ringing':
         resp.pause(length=2)
-        resp.say('Welcome to the tilde town message board.', voice='man')
     cur = conn.cursor()
     cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
     user_from_number = cur.fetchone()
     if user_from_number == None:
+        resp.say('Welcome to the tilde town message board.', voice='man')
         resp.say('You are currently a guest user.', voice='man')
     else:
         user_from_number = user_from_number[0]
@@ -37,7 +37,6 @@ def basic_twiml():
         cur.execute('SELECT name_recording FROM users WHERE userid=?', (user_from_number,))
         resp.say('Welcome back', voice='man')
         resp.play(site_url + 'static/' + cur.fetchone()[0])
-    resp.pause(length=1)
     if user_from_number != None:
         resp.redirect('/prompt-user.xml')
     else:
@@ -48,7 +47,6 @@ def basic_twiml():
 def user_prompt():
     resp = twiml.Response()
     with resp.gather(numDigits=1, action='/menu-user.xml') as gather:
-        gather.say('You\'re basically fucked because I haven\'t implemented this part yet.', voice='woman')
         gather.say('To listen to the most recent message, press 1. To leave a message of your own, press 2.', voice='woman')
     resp.pause(length=2)
     resp.redirect('/prompt-user.xml')
@@ -70,26 +68,41 @@ def user_menu():
     cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
     user_from_number = cur.fetchone()[0]
     if digit == '1':
-        cur.execute('SELECT userid, message_recording, created_datetime FROM messages ORDER BY created_datetime DESC')
-        lastmessage = cur.fetchone()
-        if lastmessage == None:
-            resp.say('There are no messages in the system!', voice='man')
-            resp.redirect('/prompt-user.xml')
-        else:
-            created_time = datetime.fromtimestamp(int(lastmessage[2]))
-            cur.execute('SELECT name_recording FROM users WHERE userid=?', (lastmessage[0],))
-            user_greet = cur.fetchone()[0]
-            resp.say('This is the most recent message, recorded at {0:%I} {0:%M} {0:%p} on {0:%A}, {0:%B} {0:%d}.'.format(created_time), voice='man')
-            resp.say('It was recorded by', voice='man')
-            resp.play(site_url + 'static/' + user_greet)
-            resp.pause(length=1)
-            resp.play(site_url + 'static/' + lastmessage[1])
-            resp.redirect('/prompt-user.xml')
+        resp.redirect('/last-message.xml')
     elif digit == '2':
         resp.redirect('/record-message.xml')
     else:
-        resp.say('That is not a valid option.', voice='feman')
+        resp.say('That is not a valid option.', voice='woman')
         resp.redirect('/prompt-user.xml')
+    return Response(response=str(resp), status=200, mimetype='text/xml')
+
+@app.route('/last-message.xml', methods=['GET', 'POST'])
+def last_message():
+    resp = twiml.Response()
+    cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
+    user_from_number = cur.fetchone()
+    cur.execute('SELECT userid, message_recording, created_datetime FROM messages ORDER BY created_datetime DESC')
+    lastmessage = cur.fetchone()
+    if lastmessage == None:
+        resp.say('There are no messages in the system!', voice='man')
+        if user_from_number != None:
+            resp.redirect('/prompt-user.xml')
+        else:
+            resp.redirect('/prompt-guest.xml')
+    else:
+        created_time = datetime.fromtimestamp(int(lastmessage[2]))
+        cur.execute('SELECT name_recording FROM users WHERE userid=?', (lastmessage[0],))
+        user_greet = cur.fetchone()[0]
+        resp.say('This is the most recent message, recorded at {0:%I} {0:%M} {0:%p} on {0:%A}, {0:%B} {0:%d}.'.format(created_time), voice='man')
+        resp.say('It was recorded by', voice='man')
+        resp.play(site_url + 'static/' + user_greet)
+        resp.pause(length=1)
+        resp.play(site_url + 'static/' + lastmessage[1])
+        resp.say('End of message.', voice='woman')
+        if user_from_number != None:
+            resp.redirect('/prompt-user.xml')
+        else:
+            resp.redirect('/prompt-guest.xml')
     return Response(response=str(resp), status=200, mimetype='text/xml')
 
 @app.route('/menu-guest.xml', methods=['GET', 'POST'])
@@ -120,7 +133,7 @@ def guest_menu():
 def create_user():
     resp = twiml.Response()
     resp.say('Now say your name, and press star when you\'re finished.', voice='man')
-    resp.record(action='/record-name.xml', playBeep='false', finishOnKey='*', maxLength=3, recordingStatusCallback='/record-name-callback.xml')
+    resp.record(action='/record-name.xml', playBeep='true', finishOnKey='*', maxLength=3, recordingStatusCallback='/record-name-callback.xml')
     resp.say('I\'m sorry, I didn\'t hear that.', voice='man')
     resp.redirect('/create-user.xml')
     return Response(response=str(resp), status=200, mimetype='text/xml')
