@@ -1,2 +1,4 @@
 *.swp
 *.pyc
+mboard.db
+static/*
