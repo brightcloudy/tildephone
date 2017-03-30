@@ -26,7 +26,7 @@ def basic_twiml():
         resp.say('Welcome to the tilde town message board.', voice='man')
     cur = conn.cursor()
     cur.execute('SELECT userid FROM numbers WHERE number=?', (request.values.get('From')[2:],))
-    user_from_number = cur.fetchone()
+    user_from_number = cur.fetchone()[0]
     if user_from_number == None:
         resp.say('You are currently a guest user.', voice='man')
     else:
