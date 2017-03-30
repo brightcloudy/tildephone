@@ -8,11 +8,13 @@ app = Flask(__name__, static_url_path='/static')
 site_url = 'http://vpn.rkfl.us/'
 conn = sqlite3.connect('mboard.db')
 cur = conn.cursor()
-cur.execute('CREATE TABLE IF NOT EXISTS users(userid INTEGER PRIMARY KEY, name_recording TEXT, permissions INTEGER NOT NULL, login_pin TEXT, lastseen TEXT NOT NULL);')
+cur.execute('CREATE TABLE IF NOT EXISTS users(userid INTEGER PRIMARY KEY, name_recording TEXT, permissions INTEGER NOT NULL, login_pin TEXT, lastseen INTEGER NOT NULL);')
 cur.execute('CREATE TABLE IF NOT EXISTS messages(messageid INTEGER PRIMARY KEY, userid INTEGER REFERENCES users(userid) ON DELETE CASCADE, message_recording TEXT NOT NULL, created_datetime INTEGER NOT NULL, message_length INTEGER NOT NULL);')
 cur.execute('CREATE TABLE IF NOT EXISTS viewed_messages(messageid INTEGER REFERENCES messages(messageid) ON DELETE CASCADE, userid INTEGER REFERENCES users(userid) ON DELETE CASCADE);')
 cur.execute('CREATE TABLE IF NOT EXISTS numbers(userid INTEGER REFERENCES users(userid) ON DELETE CASCADE, number TEXT UNIQUE NOT NULL);')
 conn.commit()
+
+call_dict = {}
 
 @app.route('/voice.xml', methods=['GET', 'POST'])
 def basic_twiml():
@@ -95,8 +97,8 @@ def guest_menu():
 @app.route('/create-user.xml', methods=['GET', 'POST'])
 def create_user():
     resp = twiml.Response()
-    resp.say('At the sound of the tone, say your name, and press star when you\'re finished.', voice='man')
-    resp.record(action='/record-name.xml', finishOnKey='*', maxLength=3, recordingStatusCallback='/record-name-callback.xml')
+    resp.say('Now say your name, and press star when you\'re finished.', voice='man')
+    resp.record(action='/record-name.xml', playBeep='false', finishOnKey='*', maxLength=3, recordingStatusCallback='/record-name-callback.xml')
     resp.say('I\'m sorry, I didn\'t hear that.', voice='man')
     resp.redirect('/create-user.xml')
     return Response(response=str(resp), status=200, mimetype='text/xml')
@@ -112,10 +114,9 @@ def name_recorded():
     resp = twiml.Response()
     digits = request.values.get('Digits')
     if digits == None or digits == '*':
+        call_dict.update({request.values.get('CallSid'): request.values.get('RecordingUrl').split('/')[-1]})
         resp.say('Here\'s what I heard.', voice='man')
-        resp.pause(length=1)
         resp.play(request.values.get('RecordingUrl'))
-        resp.pause(length=1)
         with resp.gather(numDigits=1) as gather:
             resp.say('If you want to keep that recording, do nothing. If you want to change it, press any key.', voice='man')
         cur = conn.cursor()
@@ -128,6 +129,8 @@ def name_recorded():
         resp.say('Fantastic. Thanks for registering.', voice='man')
         resp.redirect('/prompt-user.xml')
     else:
+        os.remove('static/' + call_dict[request.values.get('CallSid')])
+        call_dict.pop(request.values.get('CallSid'))
         resp.redirect('/create-user.xml')
     return Response(response=str(resp), status=200, mimetype='text/xml')
 
